@@ -68,7 +68,7 @@ public class BpfNetMaps {
 
     private void maybeThrow(final int err, final String msg) {
         if (err != 0) {
-            throw new ServiceSpecificException(err, msg + ": " + Os.strerror(err));
+              Log.e(TAG, msg + ": " + Os.strerror(err));
         }
     }
 
