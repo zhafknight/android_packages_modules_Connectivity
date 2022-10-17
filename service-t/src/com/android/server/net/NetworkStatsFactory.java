@@ -30,6 +30,7 @@ import android.net.UnderlyingNetworkInfo;
 import android.os.ServiceSpecificException;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
@@ -62,6 +63,7 @@ public class NetworkStatsFactory {
     private static final String TAG = "NetworkStatsFactory";
 
     private static final boolean USE_NATIVE_PARSING = true;
+    private static final boolean USE_EBPF = SystemProperties.getBoolean("ro.kernel.ebpf.supported", true);
     private static final boolean VALIDATE_NATIVE_STATS = false;
 
     /** Path to {@code /proc/net/xt_qtaguid/iface_stat_all}. */
@@ -183,8 +185,10 @@ public class NetworkStatsFactory {
 
     public NetworkStats readBpfNetworkStatsDev() throws IOException {
         final NetworkStats stats = new NetworkStats(SystemClock.elapsedRealtime(), 6);
-        if (nativeReadNetworkStatsDev(stats) != 0) {
-            throw new IOException("Failed to parse bpf iface stats");
+	if (USE_EBPF) {
+            if (nativeReadNetworkStatsDev(stats) != 0) {
+                throw new IOException("Failed to parse bpf iface stats");
+            }
         }
         return stats;
     }
@@ -330,7 +334,7 @@ public class NetworkStatsFactory {
             // Take a defensive copy. mPersistSnapshot is mutated in some cases below
             final NetworkStats prev = mPersistSnapshot.clone();
 
-            if (USE_NATIVE_PARSING) {
+            if (USE_EBPF && USE_NATIVE_PARSING) {
                 final NetworkStats stats =
                         new NetworkStats(SystemClock.elapsedRealtime(), 0 /* initialSize */);
                 if (mUseBpfStats) {
